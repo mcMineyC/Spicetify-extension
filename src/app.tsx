@@ -10,6 +10,7 @@ async function main() {
     console.log("\n\n\n\tDekstop-Hud-Info: Initialized!")
     const engine = socket.io.engine;
     console.log(engine.transport.name);
+    socket.emit("identification", "spotify")
     socket.emit("metadata",Spicetify.Queue.track.contextTrack.metadata)
     socket.emit("playbackState", Spicetify.Player.data.isPaused ? "Paused" : "Playing")
     socket.emit("progress", Spicetify.Player.data.position)
