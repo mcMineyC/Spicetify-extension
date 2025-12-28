@@ -14,8 +14,10 @@
     "spicetify-creator": "^1.0.17"
   },
   "dependencies": {
+    "fs": "^0.0.1-security",
     "http": "^0.0.1-security",
     "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "ws": "^8.18.3"
   }
 }

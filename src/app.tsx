@@ -1,24 +1,19 @@
-import { createServer } from "http";
-import { Server } from "socket.io";
-
-const io = new Server({
-  // options
-});
+import { io } from "socket.io-client";
 
 function sleep(ms:number) {return new Promise(resolve => setTimeout(resolve, ms));}
 
 async function main() {
   var lastProgressUpdate = Date.now();
   await sleep(200)
-  io.on("connection", () => {
-  socket.emit("playbackState", p.data.isPaused ? "Paused" : "Playing")
-  socket.emit("progress", p.data)
-  socket.emit("metadata",Spicetify.Queue.track.contextTrack.metadata)
-  // io.on("connect", (socket) => {
-  //   const engine = socket.io.engine;
-  //   console.log(engine.transport.name);
-  //   socket.emit("metadata",Spicetify.Queue.track.contextTrack.metadata)
-  // });
+  const socket = io("http://0.0.0.0:3000");
+  socket.on("connect", () => {
+    console.log("\n\n\n\tDekstop-Hud-Info: Initialized!")
+    const engine = socket.io.engine;
+    console.log(engine.transport.name);
+    socket.emit("metadata",Spicetify.Queue.track.contextTrack.metadata)
+    socket.emit("playbackState", Spicetify.Player.data.isPaused ? "Paused" : "Playing")
+    socket.emit("progress", Spicetify.Player.data.position)
+  });
   socket.on("command", async(data) => {
     // console.log(data)
     switch(data){
@@ -58,13 +53,16 @@ async function main() {
   });
   Spicetify.Player.addEventListener("onprogress",(p)=>{
     // var info = Spicetify.Queue.track.contextTrack.metadata
+    // console.log(p)
     if(Date.now() - lastProgressUpdate >= 1000){
       lastProgressUpdate = Date.now()
       socket.emit("progress", p.data)
     }
   });
-  Spicetify.Player.addEventListener("songchange",()=>{
-    var info = Spicetify.Queue.track.contextTrack.metadata
+  Spicetify.Player.addEventListener("songchange",(p)=>{
+    // var info = Spicetify.Queue.track.contextTrack.metadata
+    // Also include queue...
+    var info = p.data.item.metadata
     socket.emit("metadata", info)
   });
   // Try to make this work with the package structure
@@ -72,8 +70,6 @@ async function main() {
   //   console.log("HUH")
   //   socket.emit("command",Spicetify.Queue.track.contextTrack.metadata.title)
   // })
-  });
-  io.listen(3000);
 }
 
 export default main;
