@@ -8,21 +8,22 @@ const io = new Server(3000, {
 
 io.on("connection", (socket) => {
     console.log(`Client connected: ${socket.id}`);
+  socket.emit("command", "shuffle=true")
 
     // Listen for any message
-    socket.on("message", (msg) => {
-        console.log(`Received message from ${socket.id}: ${msg}`);
+    socket.on("playbackState", (msg) => {
+      console.log("Playing", msg == "Playing")
     });
     socket.on("progress", (msg) => {
       console.log("Progress", msg/1000)
     })
     socket.on("metadata", (msg) => {
-      console.log(msg)
+      // console.log(msg)
       console.log("Metadata", ({
         title: msg.title,
         album: msg.album_title,
         artist: msg.artist_name,
-        imageUrl: "https://i.scdn.co/image/"+msg.image_url.split(":")[2],
+        imageUrl: "https://i.scdn.co/image/"+(msg.image_url || "").split(":")[2],
         explicit: msg.is_explicit == true,
         canvasUrl: msg["canvas.url"] || "",
         length: parseInt(msg.duration)/1000,

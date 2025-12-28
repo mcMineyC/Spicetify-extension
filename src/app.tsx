@@ -13,38 +13,43 @@ async function main() {
     socket.emit("metadata",Spicetify.Queue.track.contextTrack.metadata)
     socket.emit("playbackState", Spicetify.Player.data.isPaused ? "Paused" : "Playing")
     socket.emit("progress", Spicetify.Player.data.position)
+    var q = Spicetify.Queue;
+    delete q.queueRevision;
+    socket.emit("queue",q);
   });
   socket.on("command", async(data) => {
     // console.log(data)
     switch(data){
       case "playpause":
         Spicetify.Player.togglePlay();
-        // socket.emit("command",Spicetify.Queue.track.contextTrack.metadata.title)
         break
       case "play":
         Spicetify.Player.play();
-      case "play":
+        break;
+      case "pause":
         Spicetify.Player.pause();
+        break;
       case "next":
         Spicetify.Player.next();
-        // socket.emit("command",Spicetify.Queue.nextTracks[0].contextTrack.metadata.title)
         break
       case "prev":
         Spicetify.Player.back();
-        // socket.emit("command",Spicetify.Queue.prevTracks.at(-1).contextTrack.metadata.title)
         break
       case "shuffle":
-        Spicetify.Player.setShuffle(data == "true");
-        // Spicetify.Player.toggleShuffle();
-        // socket.emit("command",Spicetify.Queue.track.contextTrack.metadata.title)
+        console.log("Shuffling")
+        Spicetify.Player.setShuffle(data.split("=")[1] == "true");
         break
       case "repeat":
-        Spicetify.Player.setRepeat(data == "true" ? 1 : 0);
-        // socket.emit("command",Spicetify.Queue.track.contextTrack.metadata.title)
+        Spicetify.Player.setRepeat(data.split("=")[1] == "true" ? 1 : 0);
         break
       case "getdata":
         socket.emit("metadata",Spicetify.Queue.track.contextTrack.metadata);
-        socket.emit("queue",Spicetify.Queue);
+        var q = Spicetify.Queue;
+        delete q.queueRevision;
+        socket.emit("queue",q);
+        socket.emit("playbackState", Spicetify.Player.data.isPaused ? "Paused" : "Playing")
+        socket.emit("progress", Spicetify.Player.data.position)
+        break;
     }
   });
   Spicetify.Player.addEventListener("onplaypause",(p)=>{
@@ -64,6 +69,9 @@ async function main() {
     // Also include queue...
     var info = p.data.item.metadata
     socket.emit("metadata", info)
+    var q = Spicetify.Queue;
+    delete q.queueRevision;
+    socket.emit("queue",q);
   });
   // Try to make this work with the package structure
   // Spicetify.Player.addEventListener("songchange",()=>{
