@@ -3,39 +3,61 @@ import { io } from "socket.io-client";
 function sleep(ms:number) {return new Promise(resolve => setTimeout(resolve, ms));}
 
 async function main() {
+  var lastProgressUpdate = Date.now();
   await sleep(200)
-  const socket = io("http://127.0.0.1:443");
+  const socket = io("http://0.0.0.0:3000");
   socket.on("connect", () => {
     const engine = socket.io.engine;
     console.log(engine.transport.name);
-    socket.emit("command",Spicetify.Queue.track.contextTrack.metadata.title)
+    socket.emit("metadata",Spicetify.Queue.track.contextTrack.metadata)
   });
-  socket.on("input", async(data) => {
+  socket.on("command", async(data) => {
     // console.log(data)
     switch(data){
-      case "PlayPause":
+      case "playpause":
         Spicetify.Player.togglePlay();
-        socket.emit("command",Spicetify.Queue.track.contextTrack.metadata.title)
+        // socket.emit("command",Spicetify.Queue.track.contextTrack.metadata.title)
         break
-      case "Next":
+      case "play":
+        Spicetify.Player.play();
+      case "play":
+        Spicetify.Player.pause();
+      case "next":
         Spicetify.Player.next();
-        socket.emit("command",Spicetify.Queue.nextTracks[0].contextTrack.metadata.title)
+        // socket.emit("command",Spicetify.Queue.nextTracks[0].contextTrack.metadata.title)
         break
-      case "Prev":
+      case "prev":
         Spicetify.Player.back();
-        socket.emit("command",Spicetify.Queue.prevTracks.at(-1).contextTrack.metadata.title)
+        // socket.emit("command",Spicetify.Queue.prevTracks.at(-1).contextTrack.metadata.title)
         break
-      case "Shuffle":
-        Spicetify.Player.toggleShuffle();
-        socket.emit("command",Spicetify.Queue.track.contextTrack.metadata.title)
+      case "shuffle":
+        Spicetify.Player.setShuffle(data == "true");
+        // Spicetify.Player.toggleShuffle();
+        // socket.emit("command",Spicetify.Queue.track.contextTrack.metadata.title)
         break
-      case "Repeat":
-        Spicetify.Player.toggleRepeat();
-        socket.emit("command",Spicetify.Queue.track.contextTrack.metadata.title)
+      case "repeat":
+        Spicetify.Player.setRepeat(data == "true" ? 1 : 0);
+        // socket.emit("command",Spicetify.Queue.track.contextTrack.metadata.title)
         break
       case "getdata":
-        socket.emit("command",Spicetify.Queue.track.contextTrack.metadata.title)
+        socket.emit("metadata",Spicetify.Queue.track.contextTrack.metadata);
+        socket.emit("queue",Spicetify.Queue);
     }
+  });
+  Spicetify.Player.addEventListener("onplaypause",(p)=>{
+    // var info = Spicetify.Queue.track.contextTrack.metadata
+    socket.emit("playbackState", p.data.isPaused ? "Paused" : "Playing")
+  });
+  Spicetify.Player.addEventListener("onprogress",(p)=>{
+    // var info = Spicetify.Queue.track.contextTrack.metadata
+    if(Date.now() - lastProgressUpdate >= 1000){
+      lastProgressUpdate = Date.now()
+      socket.emit("progress", p.data)
+    }
+  });
+  Spicetify.Player.addEventListener("songchange",()=>{
+    var info = Spicetify.Queue.track.contextTrack.metadata
+    socket.emit("metadata", info)
   });
   // Try to make this work with the package structure
   // Spicetify.Player.addEventListener("songchange",()=>{
