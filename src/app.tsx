@@ -1,6 +1,6 @@
 import { io } from "socket.io-client";
 
-function sleep(ms:number) {return new Promise(resolve => setTimeout(resolve, ms));}
+function sleep(ms: number) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 async function main() {
   var lastProgressUpdate = Date.now();
@@ -11,68 +11,103 @@ async function main() {
     const engine = socket.io.engine;
     console.log(engine.transport.name);
     socket.emit("identification", "spotify")
-    socket.emit("metadata",Spicetify.Queue.track.contextTrack.metadata)
-    socket.emit("playbackState", Spicetify.Player.data.isPaused ? "Paused" : "Playing")
+    socket.emit("metadata", Spicetify.Queue.track.contextTrack.metadata)
+    socket.emit("playbackState", {
+      playing: p.data.isPaused ? "Paused" : "Playing",
+      shuffle: p.data.shuffle,
+      repeat: p.data.repeat == 1,
+    });
     socket.emit("progress", Spicetify.Player.data.position)
     var q = Spicetify.Queue;
     delete q.queueRevision;
-    socket.emit("queue",q);
+    socket.emit("queue", q);
   });
-  socket.on("command", async(data) => {
-    // console.log(data)
-    switch(data){
-      case "playpause":
-        Spicetify.Player.togglePlay();
-        break
-      case "play":
-        Spicetify.Player.play();
-        break;
-      case "pause":
-        Spicetify.Player.pause();
-        break;
-      case "next":
-        Spicetify.Player.next();
-        break
-      case "prev":
-        Spicetify.Player.back();
-        break
-      case "shuffle":
-        console.log("Shuffling")
-        Spicetify.Player.setShuffle(data.split("=")[1] == "true");
-        break
-      case "repeat":
-        Spicetify.Player.setRepeat(data.split("=")[1] == "true" ? 1 : 0);
-        break
-      case "getdata":
-        socket.emit("metadata",Spicetify.Queue.track.contextTrack.metadata);
-        var q = Spicetify.Queue;
-        delete q.queueRevision;
-        socket.emit("queue",q);
-        socket.emit("playbackState", Spicetify.Player.data.isPaused ? "Paused" : "Playing")
-        socket.emit("progress", Spicetify.Player.data.position)
-        break;
-    }
+
+  socket.on("playpause", () => {
+    Spicetify.Player.togglePlay();
   });
-  Spicetify.Player.addEventListener("onplaypause",(p)=>{
+
+  socket.on("play", () => {
+    Spicetify.Player.play();
+  });
+
+  socket.on("pause", () => {
+    Spicetify.Player.pause();
+  });
+
+  socket.on("next", () => {
+    Spicetify.Player.next();
+  });
+
+  socket.on("prev", () => {
+    Spicetify.Player.back();
+  });
+
+  socket.on("shuffle", (enabled) => {
+    // enabled: boolean
+    console.log("Shuffling", enabled);
+    Spicetify.Player.setShuffle(Boolean(enabled));
+  });
+
+  socket.on("repeat", (enabled) => {
+    // enabled: boolean
+    Spicetify.Player.setRepeat(enabled ? 1 : 0);
+  });
+
+  socket.on("seek", (positionMs) => {
+    // positionMs: number (milliseconds)
+    Spicetify.Player.seek(parseInt(positionMs, 10));
+  });
+
+  socket.on("getdata", () => {
+    // Track metadata
+    socket.emit(
+      "metadata",
+      Spicetify.Queue.track.contextTrack.metadata
+    );
+
+    // Queue (remove unstable field)
+    const q = { ...Spicetify.Queue };
+    delete q.queueRevision;
+    socket.emit("queue", q);
+
+    // Playback state
+    socket.emit(
+      "playbackState",
+      {
+        playing: Spicetify.Player.data.isPaused ? "Paused" : "Playing",
+        shuffle: Spicetify.Player.data.shuffle,
+        repeat: Spicetify.Player.data.repeat == 1,
+      }
+    );
+
+    // Progress
+    socket.emit("progress", Spicetify.Player.data.position);
+  });
+  Spicetify.Player.addEventListener("onplaypause", (p) => {
     // var info = Spicetify.Queue.track.contextTrack.metadata
-    socket.emit("playbackState", p.data.isPaused ? "Paused" : "Playing")
+    socket.emit("playbackState", {
+      playing: p.data.isPaused ? "Paused" : "Playing",
+      shuffle: p.data.shuffle,
+      repeat: p.data.repeat == 1,
+    });
   });
-  Spicetify.Player.addEventListener("onprogress",(p)=>{
+  Spicetify.Player.addEventListener("onprogress", (p) => {
     // var info = Spicetify.Queue.track.contextTrack.metadata
     // console.log(p)
-    if(Date.now() - lastProgressUpdate >= 1000){
+    if (Date.now() - lastProgressUpdate >= 1000) {
       lastProgressUpdate = Date.now()
       socket.emit("progress", p.data)
     }
   });
-  Spicetify.Player.addEventListener("songchange",(p)=>{
+  Spicetify.Player.addEventListener("songchange", (p) => {
     // var info = Spicetify.Queue.track.contextTrack.metadata
     // Also include queue...
     var info = p.data.item.metadata
     socket.emit("metadata", info)
     var q = Spicetify.Queue;
     delete q.queueRevision;
-    socket.emit("queue",q);
+    socket.emit("queue", q);
   });
   // Try to make this work with the package structure
   // Spicetify.Player.addEventListener("songchange",()=>{
