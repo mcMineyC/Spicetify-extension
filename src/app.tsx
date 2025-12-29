@@ -13,9 +13,9 @@ async function main() {
     socket.emit("identification", "spotify")
     socket.emit("metadata", Spicetify.Queue.track.contextTrack.metadata)
     socket.emit("playbackState", {
-      playing: p.data.isPaused ? "Paused" : "Playing",
-      shuffle: p.data.shuffle,
-      repeat: p.data.repeat == 1,
+      playing: Spicetify.Player.data.isPaused ? "Paused" : "Playing",
+      shuffle: Spicetify.Player.data.shuffle,
+      repeat: Spicetify.Player.data.repeat == 1,
     });
     socket.emit("progress", Spicetify.Player.data.position)
     var q = Spicetify.Queue;
@@ -45,12 +45,14 @@ async function main() {
 
   socket.on("shuffle", (enabled) => {
     // enabled: boolean
+    // enabled = enabled == "true"
     console.log("Shuffling", enabled);
-    Spicetify.Player.setShuffle(Boolean(enabled));
+    Spicetify.Player.setShuffle(enabled);
   });
 
   socket.on("repeat", (enabled) => {
     // enabled: boolean
+    // enabled = enabled == "true"
     Spicetify.Player.setRepeat(enabled ? 1 : 0);
   });
 
@@ -97,7 +99,7 @@ async function main() {
     // console.log(p)
     if (Date.now() - lastProgressUpdate >= 1000) {
       lastProgressUpdate = Date.now()
-      socket.emit("progress", p.data)
+      socket.emit("position", p.data)
     }
   });
   Spicetify.Player.addEventListener("songchange", (p) => {
